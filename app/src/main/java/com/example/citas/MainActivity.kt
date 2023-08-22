@@ -1,37 +1,83 @@
 package com.example.citas
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import com.example.citas.ui.theme.CitasTheme
+import com.google.accompanist.pager.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 data class Cita(
     val id: Number,
     val doctor: String,
     val paciente: String,
-    val estado: String
+    var estado: String
 )
 data class Usuario(
     val id: Number,
     val nombre: String,
     val apellido: String,
     val fechaNacimiento: String,
-    val estado: String
+    var estado: String
 )
-var index: Number = 0;
+data class TabRowItem (
+    val title: String,
+    val screen: @Composable () -> Unit
+)
+@OptIn(ExperimentalPagerApi::class)
+var pagerState: PagerState? = null;
+var coroutineScope: CoroutineScope? = null;
+var citas = listOf(
+    Cita(1, "pepito", "pepita", "programada"),
+    Cita(2, "pepito", "pepita", "programada"),
+    Cita(3, "pepito", "pepita", "programada"),
+    Cita(4, "pepito", "pepita", "programada"),
+    Cita(5, "pepito", "pepita", "programada"),
+    Cita(6, "pepito", "pepita", "programada")
+)
+var pacientes = listOf(
+    Usuario(1, "pepito", "perez", "21/08/2023", "activo"),
+    Usuario(2, "jhon", "linares", "21/08/2023", "activo"),
+    Usuario(3, "andres", "cortes", "21/08/2023", "activo"),
+    Usuario(4, "sergio", "castro", "21/08/2023", "activo"),
+    Usuario(5, "victor", "aguilera", "21/08/2023", "activo"),
+    Usuario(6, "maria", "leon", "21/08/2023", "activo")
+)
+var medicos = listOf(
+    Usuario(1, "juan", "perez", "21/08/2023", "activo"),
+    Usuario(2, "gaspar", "linares", "21/08/2023", "activo"),
+    Usuario(3, "baltazar", "cortes", "21/08/2023", "activo"),
+    Usuario(4, "melchor", "castro", "21/08/2023", "activo"),
+    Usuario(5, "jose", "aguilera", "21/08/2023", "activo"),
+    Usuario(6, "maria", "de los angeles", "21/08/2023", "activo")
+)
+val tabs = listOf(
+    TabRowItem("Citas", {TablaCitasMedicas()}),
+    TabRowItem("Medicos", { TablaMedicos()}),
+    TabRowItem("Pacientes", { TablaPacientes()}),
+);
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +108,38 @@ fun DefaultPreview() {
     }
 }
 
+@OptIn(ExperimentalPagerApi::class)
+@Composable
+fun Tabs(){
+    pagerState = rememberPagerState()
+    coroutineScope = rememberCoroutineScope()
+    Column {
+        TabRow(selectedTabIndex = pagerState!!.currentPage,
+            indicator = { tabPositions ->
+                TabRowDefaults.Indicator(
+                    Modifier.pagerTabIndicatorOffset(pagerState!!, tabPositions),
+                    color = Color(0xFF6DADFC)
+                )
+            }) {
+            tabs.forEachIndexed { index, item ->
+                Tab(
+                    selected = pagerState!!.currentPage == index,
+                    onClick = { coroutineScope!!.launch { pagerState!!.animateScrollToPage(index) } },
+                    text = {
+                        Text(
+                            text = item.title
+                        )
+                    },
+                    modifier = Modifier.background(color = Color(0xFF6DADFC))
+                )
+            }
+        }
+        HorizontalPager(count = tabs.size, state = pagerState!!) {
+            tabs[pagerState!!.currentPage].screen()
+        }
+    }
+}
+
 @Composable
 fun TopAppBarScreen() {
     var taskMenuOpen by remember { mutableStateOf(false) }
@@ -76,15 +154,6 @@ fun TopAppBarScreen() {
                     TaskMenu(
                         expanded = taskMenuOpen,
                         onItemClick = {
-                            if(it == "Ver citas médicas"){
-                                index = 1;
-                            }
-                            if(it == "Ver pacientes"){
-                                index = 2;
-                            }
-                            if(it == "Ver usuarios"){
-                                index = 3;
-                            }
                         },
                         onDismiss = {
                             taskMenuOpen = false
@@ -94,14 +163,9 @@ fun TopAppBarScreen() {
             }
         )
         Box(Modifier.fillMaxSize()) {
-            if (index == 1){
-                TablaCitasMedicas()
-            }
-            if (index == 2){
-                TablaPacientes()
-            }
-            if (index == 3){
-                TablaMedicos()
+            Tabs()
+            Button(onClick = { AddToList() }, shape = CircleShape, modifier = Modifier.align(alignment = Alignment.BottomEnd)){
+                Icon(Icons.Filled.Add, contentDescription = "Agregar", tint = Color.White)
             }
         }
     }
@@ -141,44 +205,20 @@ fun TaskMenu(
 
 @Composable
 fun TablaCitasMedicas(){
-    val citas = listOf(
-        Cita(1, "pepito", "pepita", "programada"),
-        Cita(2, "pepito", "pepita", "programada"),
-        Cita(3, "pepito", "pepita", "programada"),
-        Cita(4, "pepito", "pepita", "programada"),
-        Cita(5, "pepito", "pepita", "programada"),
-        Cita(6, "pepito", "pepita", "programada")
-    )
     Box(Modifier.fillMaxSize()) {
         ListWithColumnCita(items = citas)
     }
 }
 @Composable
 fun TablaPacientes(){
-    val pacientes = listOf(
-        Usuario(1, "pepito", "perez", "21/08/2023", "activo"),
-        Usuario(2, "jhon", "linares", "21/08/2023", "activo"),
-        Usuario(3, "andres", "cortes", "21/08/2023", "activo"),
-        Usuario(4, "sergio", "castro", "21/08/2023", "activo"),
-        Usuario(5, "victor", "aguilera", "21/08/2023", "activo"),
-        Usuario(6, "maria", "leon", "21/08/2023", "activo")
-    )
     Box(Modifier.fillMaxSize()) {
         ListWithColumnUsuario(items = pacientes)
     }
 }
 @Composable
 fun TablaMedicos(){
-    val pacientes = listOf(
-        Usuario(1, "juan", "perez", "21/08/2023", "activo"),
-        Usuario(2, "gaspar", "linares", "21/08/2023", "activo"),
-        Usuario(3, "baltazar", "cortes", "21/08/2023", "activo"),
-        Usuario(4, "melchor", "castro", "21/08/2023", "activo"),
-        Usuario(5, "jose", "aguilera", "21/08/2023", "activo"),
-        Usuario(6, "maria", "de los angeles", "21/08/2023", "activo")
-    )
     Box(Modifier.fillMaxSize()) {
-        ListWithColumnUsuario(items = pacientes)
+        ListWithColumnUsuario(items = medicos)
     }
 }
 
@@ -203,7 +243,7 @@ fun ListItemRowCita(item: Cita, modifier: Modifier = Modifier) {
         contentAlignment = Alignment.CenterStart
     ) {
         Text(text = "${item.id} ${item.doctor} ${item.paciente} ${item.estado}", style = MaterialTheme.typography.subtitle1)
-        Button(onClick = { /*TODO*/ }, modifier = Modifier.padding(start = 210.dp, top =  0.dp, end = 0.dp, bottom = 0.dp)) {
+        Button(onClick = { UpdateCita(item) }, modifier = Modifier.padding(start = 210.dp, top =  0.dp, end = 0.dp, bottom = 0.dp)) {
             Text(text = "Cambiar estado")
         }
     }
@@ -230,8 +270,35 @@ fun ListItemRowUsuario(item: Usuario, modifier: Modifier = Modifier) {
         contentAlignment = Alignment.CenterStart
     ) {
         Text(text = "${item.id} ${item.nombre} ${item.apellido} ${item.fechaNacimiento} ${item.estado}", style = MaterialTheme.typography.subtitle1)
-        Button(onClick = { /*TODO*/ }, modifier = Modifier.padding(start = 270.dp, top =  0.dp, end = 0.dp, bottom = 0.dp)) {
+        Button(onClick = { UpdateUsuario(item) }, modifier = Modifier.padding(start = 270.dp, top =  0.dp, end = 0.dp, bottom = 0.dp)) {
             Text(text = "Actualizar")
         }
+    }
+}
+
+fun UpdateCita(item: Cita){
+    if (item.estado == "programada"){
+        item.estado = "finalizada";
+    } else if (item.estado == "finalizada"){
+        item.estado = "programada";
+    }
+}
+fun UpdateUsuario(item: Usuario){
+    if (item.estado == "activo"){
+        item.estado = "inactivo";
+    } else if (item.estado == "inactivo"){
+        item.estado = "activo";
+    }
+}
+@OptIn(ExperimentalPagerApi::class)
+fun AddToList(){
+    if (pagerState!!.currentPage == 0){
+        citas+=Cita(7, "nuevo", "nueva", "programada")
+    }
+    if (pagerState!!.currentPage == 1){
+        medicos+=Usuario(7, "nuevo", "nueva", "21/08/2023", "activo")
+    }
+    if (pagerState!!.currentPage == 2){
+        pacientes+=Usuario(7, "nuevo", "nueva", "21/08/2023", "activo")
     }
 }
